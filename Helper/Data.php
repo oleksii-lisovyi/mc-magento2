@@ -540,7 +540,10 @@ class Data extends \Magento\Framework\App\Helper\AbstractHelper
     {
         $connection = $this->_syncBatches->getResource()->getConnection();
         $tableName = $this->_syncBatches->getResource()->getMainTable();
-        $connection->update($tableName, ['status' => $toStatus], "mailchimp_store_id = '" . $mailchimpStore . "' and status = '" . $fromStatus . "'");
+        $connection->update($tableName,
+            ['status' => $toStatus],
+            $connection->quoteInto('mailchimp_store_id = ?', $mailchimpStore) . ' AND ' . $connection->quoteInto('status = ?', $fromStatus)
+        );
     }
 
     public function cancelAllPendingBatches($mailchimpStore)
@@ -560,7 +563,11 @@ class Data extends \Magento\Framework\App\Helper\AbstractHelper
         if(!empty($registerId)) {
             $connection = $this->_mailChimpSyncE->getResource()->getConnection();
             $tableName = $this->_mailChimpSyncE->getResource()->getMainTable();
-            $connection->update($tableName, ['mailchimp_sync_modified' => 1, 'batch_id' => null], "type = '" . $type . "' and related_id = $registerId");
+            $connection->update(
+                $tableName,
+                ['mailchimp_sync_modified' => 1, 'batch_id' => null],
+                $connection->quoteInto('type = ?', $type) . ' AND ' . $connection->quoteInto('related_id = ?', $registerId)
+            );
         }
     }
     public function getMCStoreName($storeId)
@@ -749,11 +756,11 @@ class Data extends \Magento\Framework\App\Helper\AbstractHelper
             // clean the errors table
             $connection = $this->_mailChimpErrors->getResource()->getConnection();
             $tableName = $this->_mailChimpErrors->getResource()->getMainTable();
-            $connection->delete($tableName, "mailchimp_store_id = '".$mailchimpStore."'");
+            $connection->delete($tableName, $connection->quoteInto('mailchimp_store_id = ?', $mailchimpStore));
             // clean the syncecommerce table with errors
             $connection = $this->_mailChimpSyncE->getResource()->getConnection();
             $tableName = $this->_mailChimpSyncE->getResource()->getMainTable();
-            $connection->delete($tableName, "mailchimp_store_id = '".$mailchimpStore."' and mailchimp_sync_error is not null");
+            $connection->delete($tableName, $connection->quoteInto('mailchimp_store_id = ? and mailchimp_sync_error is not null', $mailchimpStore));
 //            $connection->commit();
 //            $connection->truncateTable($tableName);
         } catch (\Zend_Db_Exception $e) {
